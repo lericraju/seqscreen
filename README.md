@@ -135,5 +135,8 @@ static/      index.html — the whole frontend
 
 ## Sample data
 
-- [sample-data/sample.fasta](sample-data/sample.fasta) — 20 synthetic sequences for upload testing.
+- [sample-data/sample.fasta](sample-data/sample.fasta) — 30 synthetic sequences for upload testing.
+- [sample-data/reverse-strand.fasta](sample-data/reverse-strand.fasta) — the motif on the forward
+  strand, the same motif present only as its reverse complement, and a control. Search
+  `GATTACAGATTACA` to see one hit flagged `forward` and one flagged `reverse`.
 - [sample-data/invalid.fasta](sample-data/invalid.fasta) — contains `X`, so it must be rejected.
