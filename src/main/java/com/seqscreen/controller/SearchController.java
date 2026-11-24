@@ -55,8 +55,10 @@ public class SearchController {
 
         double rate = outcome.candidates() == 0 ? 0
                 : (double) outcome.falsePositives() / outcome.candidates();
+        // A sequence that passes the Bloom screen is only "possibly present" until KMP confirms it.
+        int bloomPasses = mode == SearchMode.BLOOM_KMP && outcome.screened() ? outcome.candidates() : 0;
         SearchStats stats = new SearchStats(mode.name(), motif.length(), index.size(),
-                outcome.screened(), outcome.screenedOut(), outcome.candidates(),
+                outcome.screened(), outcome.screenedOut(), outcome.candidates(), bloomPasses,
                 outcome.confirmedSequences(), outcome.falsePositives(), rate,
                 outcome.screeningNote(), bothStrands, outcome.threads(),
                 Math.round(outcome.elapsedMs() * 10.0) / 10.0, matches.size(),

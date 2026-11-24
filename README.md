@@ -52,9 +52,10 @@ Open http://localhost:8080. For large datasets: `MAVEN_OPTS="-Xmx4g" mvn spring-
 mvn test
 ```
 
-60 tests: KMP (9), Bloom filter (8), inverted index (7), FASTA parsing (9), approximate matching
-and reverse complement (9), search service across all modes (18). The approximate-matching suite
-checks 500 random cases against a dynamic-programming baseline.
+62 tests: KMP (9), Bloom filter (8), inverted index (7), FASTA parsing (9), approximate matching
+and reverse complement (9), search service across all modes (20). The approximate-matching suite
+checks 500 random cases against a dynamic-programming baseline, and the search suite asserts that
+the Bloom screen decides which sequences are read without changing the hit list.
 
 ## Workflow
 
@@ -96,8 +97,10 @@ curl -X POST localhost:8080/api/benchmark -H "Content-Type: application/json" \
 ```
 
 `mode` is `INDEX_KMP` (default), `BLOOM_KMP`, `KMP` or `NAIVE`. A search response carries
-`matches` (sequence id, position, strand, edits, context) and `stats` (screened-out count,
-candidates, confirmed sequences, false positives, screening note, workers, elapsed ms).
+`matches` (sequence id, position, strand, edits, context) and `stats`: sequences screened out,
+candidates, `bloomPasses` (passes of the Bloom filter — *possibly present*, not confirmed),
+confirmed sequences, false positives, the measured false-positive rate, the screening note, the
+workers used and the elapsed time. The invariant to remember is `confirmed ≤ passes ≤ total`.
 Errors return `{"error": "..."}` with HTTP 400 (bad input), 409 (no dataset), 413 (too large),
 507 (out of memory).
 
@@ -132,6 +135,14 @@ dto/         request/response records
 validation/  FastaParser, MotifValidator, ApiException
 static/      index.html — the whole frontend
 ```
+
+## Documents
+
+- [docs/PROPOSAL.md](docs/PROPOSAL.md) — project proposal (Deliverable A).
+- [docs/REPORT.md](docs/REPORT.md) — technical report with measured results (Deliverable C).
+- [docs/DEMO.md](docs/DEMO.md) — the eight-minute demonstration script (Deliverable D).
+- [docs/STUDY_GUIDE.md](docs/STUDY_GUIDE.md) — concepts, code map and viva questions.
+- [CONTRIBUTIONS.md](CONTRIBUTIONS.md) — module ownership (Deliverable B).
 
 ## Sample data
 

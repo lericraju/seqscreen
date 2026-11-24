@@ -213,6 +213,32 @@ class SearchServiceTest {
     }
 
     @Test
+    @DisplayName("the Bloom screen decides what KMP reads, and never drops a hit")
+    void bloomScreeningDecidesTheScan() {
+        SequenceIndex idx = index(DatasetService.synthesize(2_000, 300, 31, 0.0, MOTIF));
+        SearchOutcome bloom = service.run(idx, MOTIF, SearchMode.BLOOM_KMP, exact());
+        SearchOutcome full = service.run(idx, MOTIF, SearchMode.KMP, exact());
+        assertTrue(bloom.screened());
+        assertTrue(bloom.candidates() < idx.size(),
+                "Bloom scanned " + bloom.candidates() + " of " + idx.size());
+        // Screening is a filter, never a replacement: the hit list must be identical.
+        assertEquals(signature(full), signature(bloom));
+        assertEquals(bloom.candidates() - bloom.confirmedSequences(), bloom.falsePositives());
+    }
+
+    @Test
+    @DisplayName("a Bloom pass is only possibly present until KMP confirms it")
+    void bloomPassesAreConfirmedExactly() {
+        SequenceIndex idx = index(DatasetService.synthesize(2_000, 300, 32, 0.0, MOTIF));
+        // A motif of exactly k bases is a single k-mer, so a random sequence passes by chance
+        // about once in a hundred — the false positives are visible instead of vanishing.
+        SearchOutcome outcome = service.run(idx, "GATTACAG", SearchMode.BLOOM_KMP, exact());
+        assertTrue(outcome.candidates() > 0, "expected some Bloom passes");
+        assertTrue(outcome.falsePositives() > 0, "expected visible false positives");
+        assertEquals(outcome.candidates() - outcome.confirmedSequences(), outcome.falsePositives());
+    }
+
+    @Test
     @DisplayName("every search explains how it screened")
     void screeningNoteIsAlwaysPresent() {
         SequenceIndex idx = index(DatasetService.synthesize(100, 200, 30, 0.01, MOTIF));
