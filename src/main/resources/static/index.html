@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SeqScreen — motif screening for DNA collections</title>
+<style>
+  :root {
+    --paper: #FAF9F5;
+    --ink: #1A1917;
+    --quiet: #6B675E;
+    --rule: #E3DFD5;
+    --accent: #E8F53C;
+    --accent-ink: #1A1917;
+    --rose: #9C3D2E;
+    --field: #FFFFFF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #121311;
+      --ink: #ECEBE4;
+      --quiet: #8F8C82;
+      --rule: #2A2B27;
+      --accent: #D9EA4B;
+      --accent-ink: #14150F;
+      --rose: #E0836F;
+      --field: #191A17;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 4.5rem 1.5rem 6rem;
+  }
+
+  .masthead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .wordmark {
+    font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    font-size: 1.6rem;
+    letter-spacing: -0.01em;
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .dataset {
+    font-size: 0.8125rem;
+    color: var(--quiet);
+    margin: 0;
+    text-align: right;
+  }
+
+  .lede {
+    margin: 2.5rem 0 0;
+    font-size: 1.0625rem;
+    max-width: 32rem;
+    color: var(--quiet);
+  }
+
+  .lede strong { color: var(--ink); font-weight: 500; }
+
+  .search {
+    margin-top: 2.25rem;
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+
+  .search-field { flex: 1; min-width: 0; }
+
+  label.small {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: var(--quiet);
+    margin-bottom: 0.4rem;
+  }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--ink);
+    background: var(--field);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 0.7rem 0.75rem;
+  }
+
+  input[type="text"]:focus, input[type="number"]:focus, select:focus, button:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 1px;
+  }
+
+  #motif {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 1.25rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 0.9375rem;
+    border-radius: 2px;
+    border: 1px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.72rem 1.35rem;
+    cursor: pointer;
+    transition: opacity 120ms ease;
+  }
+
+  button:hover { opacity: 0.85; }
+  button:disabled { opacity: 0.45; cursor: progress; }
+
+  button.ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--rule);
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  button.ghost:hover { border-color: var(--ink); opacity: 1; }
+
+  .presets {
+    margin-top: 0.9rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .chip {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    padding: 0.3rem 0.55rem;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--quiet);
+    cursor: pointer;
+  }
+
+  .chip:hover { border-color: var(--ink); color: var(--ink); }
+
+  details.options {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    padding-top: 0.9rem;
+  }
+
+  details.options summary {
+    cursor: pointer;
+    font-size: 0.8125rem;
+    color: var(--quiet);
+    list-style: none;
+  }
+
+  details.options summary::-webkit-details-marker { display: none; }
+  details.options summary::before { content: "+ "; }
+  details.options[open] summary::before { content: "– "; }
+  details.options summary:hover { color: var(--ink); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .readout {
+    margin-top: 2.5rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.875rem;
+    color: var(--quiet);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .readout .lead { color: var(--ink); }
+
+  .note {
+    margin-top: 0.6rem;
+    font-size: 0.8125rem;
+    color: var(--quiet);
+    max-width: 40rem;
+  }
+
+  .error {
+    margin-top: 1.5rem;
+    border-left: 2px solid var(--rose);
+    padding: 0.1rem 0 0.1rem 0.85rem;
+    color: var(--rose);
+    font-size: 0.875rem;
+  }
+
+  .hits { margin-top: 1.75rem; }
+
+  .hit {
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .hit-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    font-size: 0.8125rem;
+    color: var(--quiet);
+    margin-bottom: 0.35rem;
+  }
+
+  .hit-id { color: var(--ink); font-weight: 500; }
+
+  .strand {
+    font-size: 0.6875rem;
+    letter-spacing: 0.05em;
+    border: 1px solid var(--rule);
+    padding: 0.05rem 0.35rem;
+    border-radius: 2px;
+  }
+
+  .sequence {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.7;
+    word-break: break-all;
+    color: var(--quiet);
+  }
+
+  .sequence mark {
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 0.08em 0;
+  }
+
+  .benchmark { margin-top: 3rem; border-top: 1px solid var(--rule); padding-top: 1.5rem; }
+
+  h2 {
+    font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+    font-weight: 500;
+    font-size: 1.25rem;
+    margin: 0 0 0.35rem;
+  }
+
+  .benchmark p { font-size: 0.875rem; color: var(--quiet); margin: 0 0 1rem; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    margin-top: 1.25rem;
+  }
+
+  th, td {
+    text-align: right;
+    padding: 0.45rem 0.3rem;
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+
+  th:first-child, td:first-child { text-align: left; }
+
+  th {
+    font-weight: 500;
+    color: var(--quiet);
+    font-size: 0.75rem;
+  }
+
+  .bars { margin-top: 1.5rem; }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: 8rem 1fr 5.5rem;
+    align-items: center;
+    gap: 0.65rem;
+    font-size: 0.75rem;
+    color: var(--quiet);
+    padding: 0.16rem 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bar-track { height: 0.6rem; background: var(--rule); border-radius: 1px; }
+
+  .bar-fill { height: 100%; background: var(--ink); border-radius: 1px; }
+  .bar-fill.best { background: var(--accent); }
+
+  .notes { margin: 1.5rem 0 0; padding-left: 1.1rem; font-size: 0.8125rem; color: var(--quiet); }
+  .notes li { margin-bottom: 0.35rem; }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.75rem;
+    color: var(--quiet);
+  }
+
+  .hidden { display: none; }
+
+  .drop-target { outline: 2px dashed var(--ink); outline-offset: 4px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  @media (max-width: 34rem) {
+    .page { padding: 2.5rem 1.1rem 4rem; }
+    .search { flex-wrap: wrap; }
+    .search button { width: 100%; }
+    .masthead { flex-direction: column; align-items: flex-start; gap: 0.35rem; }
+    .dataset { text-align: left; }
+  }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <header class="masthead">
+    <h1 class="wordmark">SeqScreen</h1>
+    <p class="dataset" id="dataset">Loading dataset…</p>
+  </header>
+
+  <p class="lede">
+    Find which DNA sequences contain a motif, and where. The
+    <strong>k-mer index</strong> rules out sequences that cannot match before
+    <strong>KMP</strong> confirms every surviving position.
+  </p>
+
+  <form class="search" id="search-form" autocomplete="off">
+    <div class="search-field">
+      <label class="small" for="motif">Motif — A, C, G, T, N</label>
+      <input id="motif" type="text" value="GATTACAGATTACA" spellcheck="false"
+             aria-describedby="note">
+    </div>
+    <button type="submit" id="find">Find</button>
+  </form>
+
+  <div class="presets" id="presets">
+    <button type="button" class="chip" data-motif="GATTACAGATTACA">GATTACAGATTACA</button>
+    <button type="button" class="chip" data-motif="GAATTC">GAATTC</button>
+    <button type="button" class="chip" data-motif="TATAAA">TATAAA</button>
+    <button type="button" class="chip" data-motif="GATTNCA">GATTNCA</button>
+  </div>
+
+  <details class="options">
+    <summary>Options</summary>
+    <div class="grid">
+      <div>
+        <label class="small" for="edits">Allowed edits</label>
+        <select id="edits">
+          <option value="0">0 — exact</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+        </select>
+      </div>
+      <div>
+        <label class="small" for="mode">Screening</label>
+        <select id="mode">
+          <option value="INDEX_KMP">k-mer index</option>
+          <option value="BLOOM_KMP">Bloom filters</option>
+          <option value="KMP">none (KMP only)</option>
+          <option value="NAIVE">none (naive)</option>
+        </select>
+      </div>
+      <div>
+        <label class="small" for="threads">Workers</label>
+        <select id="threads">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="6">6</option>
+          <option value="8" selected>8</option>
+        </select>
+      </div>
+      <div>
+        <label class="small" for="strands">Strands</label>
+        <select id="strands">
+          <option value="both">both</option>
+          <option value="forward">forward only</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:1rem">
+      <div>
+        <label class="small" for="k">k</label>
+        <input id="k" type="number" min="1" max="32" value="8">
+      </div>
+      <div>
+        <label class="small" for="fp">False-positive target</label>
+        <input id="fp" type="number" min="0.001" max="0.2" step="0.001" value="0.01">
+      </div>
+      <div>
+        <label class="small" for="count">Sequences</label>
+        <input id="count" type="number" min="10" max="200000" step="100" value="10000">
+      </div>
+      <div>
+        <label class="small" for="length">Length</label>
+        <input id="length" type="number" min="20" max="5000" step="50" value="1000">
+      </div>
+    </div>
+    <div style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap">
+      <button type="button" class="ghost" id="regenerate">Rebuild synthetic dataset</button>
+      <button type="button" class="ghost" id="upload">Upload FASTA…</button>
+      <input type="file" id="file" accept=".fasta,.fa,.fna,.txt" class="hidden">
+    </div>
+  </details>
+
+  <div class="readout" id="readout">Enter a motif to search.</div>
+  <p class="note" id="note"></p>
+  <div class="error hidden" id="error" role="alert"></div>
+
+  <section class="hits" id="hits"></section>
+
+  <section class="benchmark">
+    <h2>Benchmark</h2>
+    <p>Every strategy on the same growing dataset, with an exactness check on each row.</p>
+    <button type="button" class="ghost" id="run-benchmark">Run benchmark</button>
+    <div id="benchmark-output"></div>
+  </section>
+
+  <footer>
+    Java backend · KMP, inverted k-mer index, Bloom filters, Myers bit-vector.
+    Drop a FASTA file anywhere on this page to load it.
+  </footer>
+
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => Number(n).toLocaleString("en-US");
+const bytes = (b) => {
+  if (!b) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  let i = 0, v = b;
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`;
+};
+
+let dataset = null;
+
+function showError(message) {
+  const box = $("error");
+  box.textContent = message;
+  box.classList.remove("hidden");
+}
+
+function clearError() {
+  $("error").classList.add("hidden");
+  $("error").textContent = "";
+}
+
+async function api(path, options = {}) {
+  const response = await fetch(path, options);
+  const text = await response.text();
+  let body = null;
+  try { body = text ? JSON.parse(text) : null; } catch { body = { error: text }; }
+  if (!response.ok) {
+    throw new Error((body && body.error) || `Request failed (${response.status})`);
+  }
+  return body;
+}
+
+function describeDataset(info) {
+  dataset = info;
+  if (!info || !info.sequences) {
+    $("dataset").textContent = "No dataset loaded";
+    return;
+  }
+  const screening = info.indexBuilt ? "index" : "Bloom only";
+  $("dataset").textContent =
+    `${info.source} · ${fmt(info.sequences)} sequences · ${fmt(info.totalBases)} bp · ${screening}`;
+}
+
+async function loadDataset() {
+  try {
+    describeDataset(await api("/api/dataset"));
+    if (!dataset || !dataset.sequences) {
+      await generateDataset(true);
+    }
+    // Run the default query so the page arrives with an answer, not an empty list.
+    if ($("motif").value.trim()) search();
+  } catch (e) {
+    showError(e.message);
+  }
+}
+
+async function generateDataset(silent = false) {
+  try {
+    clearError();
+    $("dataset").textContent = "Building dataset…";
+    const body = {
+      count: Number($("count").value) || 10000,
+      length: Number($("length").value) || 1000,
+      k: Number($("k").value) || 8,
+      p: Number($("fp").value) || 0.01
+    };
+    const info = await api("/api/dataset/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    describeDataset(info);
+    if (!silent) search();
+  } catch (e) {
+    showError(e.message);
+    $("dataset").textContent = "Dataset failed";
+  }
+}
+
+async function uploadFile(file) {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("k", $("k").value || 8);
+  form.append("p", $("fp").value || 0.01);
+  try {
+    clearError();
+    $("dataset").textContent = `Reading ${file.name}…`;
+    const info = await api("/api/dataset/upload", { method: "POST", body: form });
+    describeDataset(info);
+    search();
+  } catch (e) {
+    showError(e.message);
+    describeDataset(dataset);
+  }
+}
+
+function renderHits(data) {
+  const list = $("hits");
+  list.innerHTML = "";
+  const bySequence = new Map();
+  for (const match of data.matches) {
+    if (!bySequence.has(match.sequenceId)) bySequence.set(match.sequenceId, []);
+    bySequence.get(match.sequenceId).push(match);
+  }
+  for (const [id, matches] of bySequence) {
+    const block = document.createElement("div");
+    block.className = "hit";
+    const first = matches[0];
+    const edits = first.edits > 0 ? ` · within ${first.edits} edit${first.edits > 1 ? "s" : ""}` : "";
+    const positions = matches.map((m) => m.position).join(", ");
+
+    const head = document.createElement("div");
+    head.className = "hit-head";
+    const name = document.createElement("span");
+    name.className = "hit-id";
+    name.textContent = id;
+    const meta = document.createElement("span");
+    meta.textContent = `${matches.length} hit${matches.length > 1 ? "s" : ""} · position ${positions}${edits}`;
+    head.append(name, meta);
+
+    matches.forEach((match) => {
+      const badge = document.createElement("span");
+      badge.className = "strand";
+      badge.textContent = match.strand === "reverse" ? "reverse" : "forward";
+      if (match.strand === "reverse") head.append(badge);
+    });
+
+    const sequence = document.createElement("div");
+    sequence.className = "sequence";
+    const start = first.contextStart;
+    const from = first.position - start;
+    const to = from + data.motif.length;
+    const before = document.createTextNode(first.context.slice(0, from));
+    const mark = document.createElement("mark");
+    mark.textContent = first.context.slice(from, to);
+    const after = document.createTextNode(first.context.slice(to));
+    sequence.append(before, mark, after);
+
+    block.append(head, sequence);
+    list.append(block);
+  }
+}
+
+function renderStats(data) {
+  const s = data.stats;
+  const parts = [
+    `${fmt(s.totalSequences)} sequences`,
+    `${fmt(s.matches)}${s.truncated ? "+" : ""} ${s.matches === 1 ? "match" : "matches"}`,
+    s.screened ? `${fmt(s.screenedOut)} screened out` : "no screening",
+    `${s.elapsedMs} ms`,
+    `${s.threads} worker${s.threads > 1 ? "s" : ""}`
+  ];
+  $("readout").innerHTML = `<span class="lead">${parts[0]}</span> · ${parts.slice(1).join(" · ")}`;
+  $("note").textContent = s.screeningNote;
+
+  if (s.matches === 0) {
+    const hint = $("edits").value === "0"
+      ? " Nothing contains this motif. Try allowing one or two edits, or the other strand."
+      : " Nothing is within that edit budget. Try a larger budget or a shorter motif.";
+    $("note").textContent = s.screeningNote + hint;
+  }
+}
+
+async function search() {
+  const motif = $("motif").value.trim().toUpperCase();
+  if (!motif) { $("note").textContent = "Enter a motif first."; return; }
+  clearError();
+  $("find").disabled = true;
+  $("find").textContent = "Searching";
+  try {
+    const data = await api("/api/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        motif,
+        mode: $("mode").value,
+        mismatches: Number($("edits").value),
+        bothStrands: $("strands").value === "both",
+        threads: Number($("threads").value)
+      })
+    });
+    renderStats(data);
+    renderHits(data);
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    $("find").disabled = false;
+    $("find").textContent = "Find";
+  }
+}
+
+function renderBenchmark(data) {
+  const out = $("benchmark-output");
+  out.innerHTML = "";
+  if (!data.rows || data.rows.length === 0) { return; }
+
+  const table = document.createElement("table");
+  table.innerHTML = `<thead><tr>
+      <th>Sequences</th><th>Naive</th><th>KMP</th><th>Bloom+KMP</th>
+      <th>Index+KMP</th><th>vs KMP</th><th>Index build</th>
+    </tr></thead>`;
+  const body = document.createElement("tbody");
+  for (const row of data.rows) {
+    const tr = document.createElement("tr");
+    const cells = [
+      fmt(row.sequences),
+      `${row.naiveMs.toFixed(1)} ms`,
+      `${row.kmpMs.toFixed(1)} ms`,
+      `${row.bloomKmpMs.toFixed(1)} ms`,
+      row.indexSkipped ? `${row.indexKmpMs.toFixed(1)} ms*` : `${row.indexKmpMs.toFixed(1)} ms`,
+      row.indexSkipped ? "—" : `${row.speedupVsKmp.toFixed(1)}×`,
+      row.indexSkipped ? "—" : `${row.indexBuildMs.toFixed(0)} ms`
+    ];
+    cells.forEach((text) => {
+      const td = document.createElement("td");
+      td.textContent = text;
+      tr.append(td);
+    });
+    if (!row.resultsIdentical) {
+      tr.style.borderBottom = "2px solid var(--rose)";
+      tr.title = "Strategies disagreed — this row is not a valid measurement";
+    }
+    body.append(tr);
+  }
+  table.append(body);
+  out.append(table);
+
+  const bars = document.createElement("div");
+  bars.className = "bars";
+  const labels = [
+    ["Naive", "naiveMs"],
+    ["KMP", "kmpMs"],
+    ["Bloom + KMP", "bloomKmpMs"],
+    ["Index + KMP", "indexKmpMs"]
+  ];
+  let anySkipped = false;
+  for (const row of data.rows) {
+    const heading = document.createElement("div");
+    heading.className = "bar-row";
+    heading.innerHTML = `<span>${fmt(row.sequences)} sequences</span><span></span><span></span>`;
+    bars.append(heading);
+    const slowest = Math.max(row.naiveMs, row.kmpMs, row.indexKmpMs, 0.0001);
+    const fastest = Math.min(row.kmpMs, row.bloomKmpMs, row.indexKmpMs);
+    for (const [label, key] of labels) {
+      const ms = row[key];
+      const line = document.createElement("div");
+      line.className = "bar-row";
+      const name = document.createElement("span");
+      const fallback = key === "indexKmpMs" && row.indexSkipped;
+      if (fallback) anySkipped = true;
+      name.textContent = fallback ? `${label}*` : label;
+      const track = document.createElement("span");
+      track.className = "bar-track";
+      const fill = document.createElement("span");
+      fill.className = "bar-fill" + (ms === fastest ? " best" : "");
+      fill.style.display = "block";
+      fill.style.width = `${Math.max(1.5, (ms / slowest) * 100)}%`;
+      track.append(fill);
+      const value = document.createElement("span");
+      value.textContent = `${ms.toFixed(1)} ms`;
+      line.append(name, track, value);
+      bars.append(line);
+    }
+  }
+  out.append(bars);
+
+  if (anySkipped) {
+    const footnote = document.createElement("p");
+    footnote.className = "note";
+    footnote.textContent = "* The index did not fit at this size, so Index + KMP fell back to "
+      + "Bloom screening. Its time is the fallback path, not an index lookup.";
+    out.append(footnote);
+  }
+
+  if (data.notes && data.notes.length) {
+    const notes = document.createElement("ul");
+    notes.className = "notes";
+    for (const note of data.notes) {
+      const li = document.createElement("li");
+      li.textContent = note;
+      notes.append(li);
+    }
+    out.append(notes);
+  }
+}
+
+async function runBenchmark() {
+  const button = $("run-benchmark");
+  button.disabled = true;
+  const original = button.textContent;
+  button.textContent = "Measuring…";
+  $("benchmark-output").textContent = "";
+  try {
+    clearError();
+    const data = await api("/api/benchmark", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sizes: [1000, 10000, 100000],
+        length: 500,
+        motif: $("motif").value.trim().toUpperCase() || "GATTACAGATTACA",
+        plantedFraction: 0.01,
+        k: Number($("k").value) || 8,
+        p: Number($("fp").value) || 0.01
+      })
+    });
+    renderBenchmark(data);
+  } catch (e) {
+    showError(e.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = original;
+  }
+}
+
+$("search-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  search();
+});
+
+$("presets").addEventListener("click", (event) => {
+  const chip = event.target.closest(".chip");
+  if (!chip) return;
+  $("motif").value = chip.dataset.motif;
+  search();
+});
+
+$("regenerate").addEventListener("click", () => generateDataset());
+$("upload").addEventListener("click", () => $("file").click());
+$("file").addEventListener("change", (event) => {
+  if (event.target.files[0]) uploadFile(event.target.files[0]);
+});
+$("run-benchmark").addEventListener("click", runBenchmark);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "/" && document.activeElement !== $("motif")) {
+    event.preventDefault();
+    $("motif").focus();
+    $("motif").select();
+  }
+});
+
+document.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  document.body.classList.add("drop-target");
+});
+document.addEventListener("dragleave", () => document.body.classList.remove("drop-target"));
+document.addEventListener("drop", (event) => {
+  event.preventDefault();
+  document.body.classList.remove("drop-target");
+  const file = event.dataTransfer.files[0];
+  if (file) uploadFile(file);
+});
+
+loadDataset();
+</script>
+</body>
+</html>
