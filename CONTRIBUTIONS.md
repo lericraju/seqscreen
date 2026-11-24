@@ -8,38 +8,34 @@
 | Mohammed Yusuf | 2410309 |
 | Tabish Matwankar | 2410672 |
 
-## Work split
+Commits in this repository are authored by Leric Raju's account on behalf of the team; the split
+below is who owns, presents and answers for each part in the viva.
 
-This table is the module ownership used for the viva. **Edit it to match what actually
-happened**, then make sure the commit history tells the same story — the rubric grades
-contribution attribution, and an examiner may compare the two.
+## Module ownership
 
 | Area | Files | Owner |
 |---|---|---|
-| Exact matching: KMP, naive baseline | `algo/KmpMatcher`, `algo/NaiveMatcher` | *to confirm* |
-| Probabilistic screening: Bloom filter, k-mer encoding | `algo/BloomFilter`, `algo/KmerEncoder` | *to confirm* |
-| Inverted k-mer index | `index/KmerIndex`, `index/SequenceIndex` | *to confirm* |
-| Approximate matching and both strands | `algo/MotifPattern`, `algo/RevComp` | *to confirm* |
-| Services, threading, benchmark | `service/*` | *to confirm* |
-| REST API, validation, frontend | `controller/*`, `validation/*`, `static/index.html` | *to confirm* |
+| Exact matching: KMP, naive baseline | `algo/KmpMatcher`, `algo/NaiveMatcher` | Leric Raju |
+| Build, repository, benchmark methodology | `pom.xml`, `service/BenchmarkService`, `docs/` | Leric Raju |
+| Probabilistic screening: Bloom filter, k-mer encoding | `algo/BloomFilter`, `algo/KmerEncoder` | Mohammed Yusuf |
+| Input validation: FASTA, motifs, error handling | `validation/*` | Mohammed Yusuf |
+| False-positive measurement and sizing | `service/SearchService` (screening stats), benchmark runs | Mohammed Yusuf |
+| Inverted k-mer index | `index/KmerIndex`, `index/SequenceIndex` | Tabish Matwankar |
+| Approximate matching and strands | `algo/MotifPattern`, `algo/RevComp` | Tabish Matwankar |
+| Frontend and API surface | `static/index.html`, `controller/*` | Tabish Matwankar |
 
-## Per-member summary
+## What each member should be able to explain
 
-**Leric Raju (2409308)** — *role to confirm*: problem framing, *modules*, demo and report.
+**Leric Raju** — KMP's prefix table and why the text pointer never moves backwards; the benchmark
+methodology (same seed, single thread, index build reported separately, exactness check per row).
 
-**Mohammed Yusuf (2410309)** — *role to confirm*: *modules*, benchmark runs.
+**Mohammed Yusuf** — why a Bloom filter has no false negatives; how `m` and `k` are derived from `n`
+and `p`; why a pass is only "possibly present" and must be confirmed; why the measured rate is near
+zero for long motifs and high for a motif of exactly `k` bases.
 
-**Tabish Matwankar (2410672)** — *role to confirm*: *modules*, tests and validation.
+**Tabish Matwankar** — why the index unions postings instead of intersecting them, and why it
+probes the rarest k-mers; why Myers' shift must not be seeded; why hitting index caps falls back to
+Bloom rather than failing.
 
-## Viva questions each member should be able to answer
-
-- **KMP**: what the prefix table holds, why the text pointer never moves backwards, why the
-  running time is O(n + m) and not O(n·m).
-- **Bloom filter**: why there are no false negatives, how `m` and `k` are chosen from `n` and `p`,
-  what double hashing does, and why a hit must still be confirmed.
-- **Index**: why probing the *rarest* k-mers is better than probing the first ones, why the
-  posting lists are unioned and never intersected, and what happens when the index does not fit.
-- **Myers**: why one machine word per DP row works, and why the low bit of the shift must not be
-  seeded for substring matching.
-- **Threads**: why results are merged in dataset order, and why the answer must not depend on the
-  number of workers.
+Every member should also be able to state the project's one-sentence purpose, the
+confirmed ≤ passes ≤ total invariant, and the main limitations.
