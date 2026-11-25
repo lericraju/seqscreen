@@ -244,8 +244,9 @@ public final class SequenceIndex {
     }
 
     /**
-     * Marks every sequence holding one of the motif's rarest k-mers. Union, never intersection:
-     * the rarest k-mers of a long motif are complementary evidence, not joint requirements.
+     * Marks every sequence holding one of the motif's rarest k-mers. Within a strand any one k-mer
+     * is a valid test, so the postings are unioned: that keeps a superset of what intersecting them
+     * would. Across the two strands a union is required, because a hit may be on either.
      */
     private int probe(String motif, boolean[] keep) {
         int windows = motif.length() - k + 1;

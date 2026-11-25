@@ -1,6 +1,7 @@
 package com.seqscreen.controller;
 
 import com.seqscreen.validation.ApiException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,6 +17,12 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private final long maxUploadMb;
+
+    public GlobalExceptionHandler(@Value("${MAX_UPLOAD_MB:200}") long maxUploadMb) {
+        this.maxUploadMb = maxUploadMb;
+    }
+
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<Map<String, String>> handleApi(ApiException error) {
         return ResponseEntity.status(error.status()).body(Map.of("error", error.getMessage()));
@@ -24,7 +31,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> handleTooLarge(MaxUploadSizeExceededException error) {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                .body(Map.of("error", "The upload is larger than the 200 MB limit."));
+                .body(Map.of("error", "The upload is larger than this instance's "
+                        + maxUploadMb + " MB limit."));
     }
 
     @ExceptionHandler(IllegalStateException.class)

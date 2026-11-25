@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SeqScreen — motif screening for DNA collections</title>
+<title>SeqScreen: motif screening for DNA collections</title>
 <style>
   :root {
     --paper: #FAF9F5;
@@ -444,10 +444,90 @@
     color: var(--faint);
   }
 
+  /* ---------- dataset ---------- */
+
+  .sizes {
+    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  .size {
+    height: auto;
+    text-align: left;
+    padding: 0.6rem 0.7rem;
+    background: var(--field);
+    color: var(--ink);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: border-color 120ms ease, background 120ms ease;
+  }
+
+  .size:hover { border-color: var(--faint); opacity: 1; }
+  .size:disabled { opacity: 0.45; cursor: progress; }
+
+  .size[aria-pressed="true"] {
+    border-color: var(--ink);
+    background: var(--wash);
+    box-shadow: inset 0 -2px 0 var(--ink);
+  }
+
+  .size-name { display: block; font-size: 0.875rem; font-weight: 500; }
+  .size-cost { display: block; font-size: 0.6875rem; color: var(--faint); margin-top: 0.1rem; }
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-top: 1rem;
+    min-height: 1.5rem;
+    font-size: 0.875rem;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .status[data-state="empty"] { color: var(--quiet); }
+  .status[data-state="failed"] { color: var(--rose); }
+
+  .spinner {
+    flex: none;
+    width: 0.85rem;
+    height: 0.85rem;
+    border: 2px solid var(--rule);
+    border-top-color: var(--ink);
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+  }
+
+  .status[data-state="ready"] .spinner,
+  .status[data-state="empty"] .spinner,
+  .status[data-state="failed"] .spinner { display: none; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .sample-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sample-row select {
+    width: auto;
+    max-width: 100%;
+    height: 2.4rem;
+    font-size: 0.8125rem;
+  }
+
   .hidden { display: none; }
   .drop-target { outline: 2px dashed var(--ink); outline-offset: 4px; }
 
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+    .spinner { animation: none; border-top-color: var(--rule); }
+  }
 
   @media (max-width: 46rem) {
     .page { padding: 2.5rem 1.15rem 4rem; }
@@ -458,6 +538,7 @@
     .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .search { flex-wrap: wrap; }
     .search button { width: 100%; }
+    .sizes { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -466,13 +547,13 @@
 
   <header class="masthead">
     <h1 class="wordmark">SeqScreen</h1>
-    <p class="dataset" id="dataset">Loading dataset…</p>
+    <p class="dataset" id="dataset">Checking the server…</p>
   </header>
 
   <p class="lede">
     Find which DNA sequences contain a motif, and where.
-    A filter decides which sequences are worth reading — <strong>index</strong> or
-    <strong>Bloom filter</strong> — and <strong>KMP</strong> then confirms every position
+    A filter decides which sequences are worth reading: an <strong>index</strong> or a
+    <strong>Bloom filter</strong>. <strong>KMP</strong> then confirms every position
     exactly, so screening can only narrow the search, never lose a hit.
   </p>
 
@@ -485,6 +566,8 @@
     <button type="submit" id="find">Find</button>
   </form>
 
+  <p class="note hidden" id="search-hint">Choose a dataset below to begin.</p>
+
   <div class="presets" id="presets">
     <span class="label">Try</span>
     <button type="button" class="chip" data-motif="GATTACAGATTACA">GATTACAGATTACA</button>
@@ -492,6 +575,44 @@
     <button type="button" class="chip" data-motif="GAATTC">GAATTC</button>
     <button type="button" class="chip" data-motif="GATTNCA">GATTNCA</button>
   </div>
+
+  <section class="section" id="dataset-section">
+    <h2 class="section-title">Dataset</h2>
+    <p class="section-sub">One dataset is held in memory. Free hosting sleeps when idle, so this is
+      where you load one again.</p>
+
+    <div class="status" id="dataset-status" data-state="connecting" role="status" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>
+      <span id="dataset-status-text">Checking the server…</span>
+    </div>
+    <p class="help hidden" id="dataset-wake">Server is waking up (free hosting). This can take up to a minute.</p>
+    <p class="help hidden" id="dataset-source"></p>
+
+    <div class="sizes" id="dataset-presets" role="group" aria-label="Dataset size">
+      <button type="button" class="size" data-preset="small">
+        <span class="size-name">Small</span>
+        <span class="size-cost">1,000 × 500 bp · 0.5 Mbp</span>
+      </button>
+      <button type="button" class="size" data-preset="medium">
+        <span class="size-name">Medium</span>
+        <span class="size-cost">5,000 × 1,000 bp · 5 Mbp</span>
+      </button>
+      <button type="button" class="size" data-preset="large">
+        <span class="size-name">Large</span>
+        <span class="size-cost">10,000 × 1,000 bp · 10 Mbp</span>
+      </button>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="ghost" id="upload">Upload FASTA…</button>
+      <input type="file" id="file" accept=".fasta,.fa,.fna,.txt" class="hidden">
+      <div class="sample-row">
+        <select id="sample-pick" aria-label="Bundled sample"></select>
+        <button type="button" class="ghost" id="load-sample">Load sample FASTA</button>
+      </div>
+      <button type="button" class="ghost hidden" id="load-small">Load Small dataset</button>
+    </div>
+  </section>
 
   <section class="section">
     <h2 class="section-title">Screening</h2>
@@ -526,7 +647,7 @@
       <div>
         <label class="label" for="edits">Allowed edits</label>
         <select id="edits">
-          <option value="0">0 — exact</option>
+          <option value="0">0 (exact)</option>
           <option value="1">1</option>
           <option value="2">2</option>
           <option value="3">3</option>
@@ -563,20 +684,18 @@
       </div>
       <div>
         <label class="label" for="count">Sequences</label>
-        <input id="count" type="number" min="10" max="200000" step="100" value="5000">
+        <input id="count" type="number" min="10" max="200000" step="100" value="1000">
         <span class="help">How many sequences the synthetic build creates.</span>
       </div>
       <div>
         <label class="label" for="length">Length</label>
-        <input id="length" type="number" min="20" max="5000" step="50" value="1000">
+        <input id="length" type="number" min="20" max="5000" step="50" value="500">
         <span class="help">Bases per sequence.</span>
       </div>
     </div>
 
     <div class="actions">
       <button type="button" class="ghost" id="regenerate">Rebuild synthetic dataset</button>
-      <button type="button" class="ghost" id="upload">Upload FASTA…</button>
-      <input type="file" id="file" accept=".fasta,.fa,.fna,.txt" class="hidden">
     </div>
   </section>
 
@@ -618,8 +737,8 @@ const MODES = {
   },
   BLOOM_KMP: {
     explain: "Each sequence owns a small Bloom filter over its k-mers. A sequence is read only if " +
-      "every k-mer of the motif might be present — a pass means \"possibly present\", never " +
-      "\"contains it\" — so KMP confirms every pass and false positives are counted.",
+      "every k-mer of the motif might be present: a pass means \"possibly present\", never " +
+      "\"contains it\", so KMP confirms every pass and false positives are counted.",
     screened: true
   },
   KMP: {
@@ -636,6 +755,17 @@ const MODES = {
 
 let mode = "INDEX_KMP";
 let dataset = null;
+let datasetState = "connecting";
+let datasetBusy = false;
+let clock = null;
+let autoTimer = null;
+let userChose = false;
+
+const PRESETS = {
+  small: { count: 1000, length: 500 },
+  medium: { count: 5000, length: 1000 },
+  large: { count: 10000, length: 1000 }
+};
 
 function showError(message) {
   const box = $("error");
@@ -650,7 +780,7 @@ function clearError() {
 
 function setMode(next) {
   mode = next;
-  document.querySelectorAll(".mode").forEach((button) => {
+  document.querySelectorAll("#modes .mode").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.mode === next));
   });
   $("mode-explain").textContent = MODES[next].explain;
@@ -662,70 +792,243 @@ async function api(path, options = {}) {
   let body = null;
   try { body = text ? JSON.parse(text) : null; } catch { body = { error: text }; }
   if (!response.ok) {
-    throw new Error((body && body.error) || `Request failed (${response.status})`);
+    const error = new Error((body && body.error) || `Request failed (${response.status})`);
+    error.status = response.status;
+    throw error;
   }
   return body;
 }
 
-function describeDataset(info) {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** The masthead carries the same line as the status banner, so both always agree. */
+function statusText(text) {
+  $("dataset-status-text").textContent = text;
+  $("dataset").textContent = text;
+}
+
+function setState(state, text) {
+  datasetState = state;
+  $("dataset-status").dataset.state = state;
+  statusText(text);
+  syncControls();
+}
+
+/** Search, benchmark and the screening modes stay dark until a dataset is ready. */
+function syncControls() {
+  const ready = datasetState === "ready";
+  $("find").disabled = !ready;
+  $("run-benchmark").disabled = !ready;
+  document.querySelectorAll("#modes .mode").forEach((button) => { button.disabled = !ready; });
+  $("search-hint").classList.toggle("hidden", ready);
+  ["upload", "load-sample", "sample-pick", "regenerate"].forEach((id) => {
+    const element = $(id);
+    if (element) element.disabled = datasetBusy;
+  });
+  document.querySelectorAll("#dataset-presets button").forEach((button) => {
+    button.disabled = datasetBusy;
+  });
+  $("load-small").disabled = datasetBusy;
+}
+
+function startClock(prefix) {
+  const started = Date.now();
+  stopClock();
+  const tick = () => statusText(`${prefix} ${Math.round((Date.now() - started) / 1000)}s`);
+  tick();
+  clock = setInterval(tick, 500);
+}
+
+function stopClock() {
+  if (clock) clearInterval(clock);
+  clock = null;
+}
+
+function showDataset(info) {
   dataset = info;
-  if (!info || !info.sequences) {
-    $("dataset").textContent = "No dataset loaded";
+  stopClock();
+  autoTimer = null;
+  $("dataset-wake").classList.add("hidden");
+  $("load-small").classList.add("hidden");
+  clearError();
+  const source = $("dataset-source");
+  source.textContent = `${info.source} · ${info.indexBuilt ? "index built" : "Bloom filters only"}`;
+  source.classList.remove("hidden");
+  setState("ready", `Ready: ${fmt(info.sequences)} sequences · ${fmt(info.totalBases)} bp`);
+  if ($("motif").value.trim()) search();
+}
+
+/** A dataset request failed: keep whatever is loaded, point at the picker, offer the quick retry. */
+function datasetFailed(message, text) {
+  stopClock();
+  showError(message);
+  if (dataset && dataset.sequences) {
+    setState("ready", `Ready: ${fmt(dataset.sequences)} sequences · ${fmt(dataset.totalBases)} bp`);
     return;
   }
-  $("dataset").textContent =
-    `${fmt(info.sequences)} sequences · ${fmt(info.totalBases)} bp · `
-    + `${info.indexBuilt ? "index built" : "Bloom only"} · ${info.source}`;
+  setState("failed", text);
+  $("load-small").classList.remove("hidden");
 }
 
-async function loadDataset() {
-  try {
-    describeDataset(await api("/api/dataset"));
-    if (!dataset || !dataset.sequences) {
-      await generateDataset(true);
-    }
-    if ($("motif").value.trim()) search();
-  } catch (e) {
-    showError(e.message);
-  }
+function markPreset(key) {
+  document.querySelectorAll("#dataset-presets button").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.preset === key));
+  });
 }
 
-async function generateDataset(silent = false) {
+async function applyPreset(key, automatic = false) {
+  if (datasetBusy) return;
+  userChose = true;
+  clearTimeout(autoTimer);
+  const preset = PRESETS[key];
+  $("count").value = preset.count;
+  $("length").value = preset.length;
+  markPreset(key);
+  await buildDataset(preset.count, preset.length, automatic);
+}
+
+async function buildDataset(count, length, automatic = false) {
+  if (datasetBusy) return;
+  datasetBusy = true;
+  syncControls();
+  clearError();
+  const prefix = automatic ? "Building the Small dataset…" : "Building dataset…";
+  setState("building", prefix);
+  startClock(prefix);
   try {
-    clearError();
-    $("dataset").textContent = "Building dataset…";
-    const info = await api("/api/dataset/generate", {
+    showDataset(await api("/api/dataset/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        count: Number($("count").value) || 5000,
-        length: Number($("length").value) || 1000,
+        count,
+        length,
         k: Number($("k").value) || 8,
         p: Number($("fp").value) || 0.01
       })
-    });
-    describeDataset(info);
-    if (!silent) search();
+    }));
   } catch (e) {
-    showError(e.message);
-    $("dataset").textContent = "Dataset failed";
+    markPreset(null);
+    datasetFailed(e.message, "Could not build that dataset. Choose a size below.");
+  } finally {
+    datasetBusy = false;
+    syncControls();
+  }
+}
+
+async function loadSample() {
+  const name = $("sample-pick").value;
+  if (datasetBusy || !name) return;
+  userChose = true;
+  clearTimeout(autoTimer);
+  datasetBusy = true;
+  syncControls();
+  clearError();
+  const prefix = `Loading ${name}…`;
+  setState("building", prefix);
+  startClock(prefix);
+  const query = `k=${Number($("k").value) || 8}&p=${Number($("fp").value) || 0.01}`;
+  try {
+    showDataset(await api(`/api/dataset/sample/${encodeURIComponent(name)}?${query}`,
+      { method: "POST" }));
+  } catch (e) {
+    datasetFailed(e.message, "Could not load that sample. Choose a dataset below.");
+  } finally {
+    datasetBusy = false;
+    syncControls();
   }
 }
 
 async function uploadFile(file) {
+  if (datasetBusy || !file) return;
+  userChose = true;
+  clearTimeout(autoTimer);
+  datasetBusy = true;
+  syncControls();
+  clearError();
+  const prefix = `Reading ${file.name}…`;
+  setState("building", prefix);
+  startClock(prefix);
   const form = new FormData();
   form.append("file", file);
   form.append("k", $("k").value || 8);
   form.append("p", $("fp").value || 0.01);
   try {
-    clearError();
-    $("dataset").textContent = `Reading ${file.name}…`;
-    describeDataset(await api("/api/dataset/upload", { method: "POST", body: form }));
-    search();
+    showDataset(await api("/api/dataset/upload", { method: "POST", body: form }));
   } catch (e) {
-    showError(e.message);
-    describeDataset(dataset);
+    datasetFailed(e.message, "That file was rejected. Choose a dataset below.");
+  } finally {
+    datasetBusy = false;
+    syncControls();
   }
+}
+
+async function loadSampleList() {
+  try {
+    const samples = await api("/api/dataset/samples");
+    const pick = $("sample-pick");
+    pick.innerHTML = "";
+    for (const sample of samples) {
+      const option = document.createElement("option");
+      option.value = sample.name;
+      option.textContent = `${sample.label}: ${fmt(sample.sequences)} seq · ${fmt(sample.bases)} bp`;
+      pick.append(option);
+    }
+    const empty = samples.length === 0;
+    pick.classList.toggle("hidden", empty);
+    $("load-sample").classList.toggle("hidden", empty);
+  } catch {
+    $("sample-pick").classList.add("hidden");
+    $("load-sample").classList.add("hidden");
+  }
+}
+
+/**
+ * On load: ask once, retry while the host is still starting, and never quietly build a dataset the
+ * user did not see. If nothing is loaded, the Small preset is offered with a one-second countdown.
+ */
+async function boot() {
+  const wakeTimer = setTimeout(() => {
+    if (datasetState !== "connecting") return;
+    $("dataset-wake").classList.remove("hidden");
+    statusText("Server is waking up (free hosting). This can take up to a minute");
+  }, 3000);
+
+  let info = null;
+  let failure = null;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      info = await api("/api/dataset");
+      break;
+    } catch (e) {
+      failure = e;
+      if (attempt < 5) {
+        statusText(`Server not answering yet (attempt ${attempt} of 5). Retrying in 2 s`);
+        await sleep(2000);
+      }
+    }
+  }
+  clearTimeout(wakeTimer);
+
+  if (!info) {
+    datasetFailed((failure && failure.message) || "The server is not answering.",
+      "The server is not answering.");
+    return;
+  }
+  $("dataset-wake").classList.add("hidden");
+  if (info.sequences > 0) {
+    showDataset(info);
+    return;
+  }
+  offerAutoLoad();
+}
+
+function offerAutoLoad() {
+  clearTimeout(autoTimer);
+  if (userChose || datasetState === "ready") return;
+  setState("empty", "No dataset yet. Loading the Small preset in 1 second.");
+  autoTimer = setTimeout(() => {
+    if (!userChose && datasetState !== "ready" && !datasetBusy) applyPreset("small", true);
+  }, 1000);
 }
 
 function count(n, noun) {
@@ -759,8 +1062,8 @@ function renderScreening(stats) {
   const head = document.createElement("p");
   head.className = "screening-head";
   head.textContent = bloom
-    ? "Bloom filter — a pass means possibly present, never contains it"
-    : "k-mer index — sequences holding one of the motif's rare k-mers";
+    ? "Bloom filter: a pass means possibly present, never contains it"
+    : "k-mer index: sequences holding one of the motif's rare k-mers";
   box.append(head);
 
   const list = document.createElement("dl");
@@ -785,7 +1088,7 @@ function renderScreening(stats) {
       : `${fmt(stats.bloomPasses)} passed the filter and were confirmed by KMP.`;
     const price = stats.falsePositives > 0
       ? ` ${fmt(stats.falsePositives)} of those passes (${pct(stats.observedFalsePositiveRate)}) `
-        + `contained nothing — the price of a probabilistic filter, and why a pass is never `
+        + `contained nothing, the price of a probabilistic filter, and why a pass is never `
         + `reported as a match on its own.`
       : ` Every pass was real at this size; a false positive would cost one extra confirmation, `
         + `never a wrong answer.`;
@@ -868,6 +1171,11 @@ function renderStats(data) {
 }
 
 async function search() {
+  if (datasetState !== "ready") {
+    $("search-hint").classList.remove("hidden");
+    statusText("Choose a dataset to search.");
+    return;
+  }
   const motif = $("motif").value.trim().toUpperCase();
   if (!motif) { $("note").textContent = "Enter a motif first."; return; }
   clearError();
@@ -888,9 +1196,18 @@ async function search() {
     renderStats(data);
     renderHits(data);
   } catch (e) {
+    if (e.status === 409) {
+      // The host restarted and the in-memory dataset went with it: offer the picker, not an error.
+      dataset = null;
+      $("dataset-source").classList.add("hidden");
+      showError("No dataset is loaded: the server restarted. Choose one below to begin again.");
+      setState("empty", "The server restarted, so the loaded dataset is gone.");
+      $("load-small").classList.remove("hidden");
+      return;
+    }
     showError(e.message);
   } finally {
-    $("find").disabled = false;
+    $("find").disabled = datasetState !== "ready";
     $("find").textContent = "Find";
   }
 }
@@ -914,8 +1231,8 @@ function renderBenchmark(data) {
       `${row.kmpMs.toFixed(1)} ms`,
       `${row.bloomKmpMs.toFixed(1)} ms`,
       row.indexSkipped ? `${row.indexKmpMs.toFixed(1)} ms*` : `${row.indexKmpMs.toFixed(1)} ms`,
-      row.indexSkipped ? "—" : `${row.speedupVsKmp.toFixed(1)}×`,
-      row.indexSkipped ? "—" : `${row.indexBuildMs.toFixed(0)} ms`
+      row.indexSkipped ? "n/a" : `${row.speedupVsKmp.toFixed(1)}×`,
+      row.indexSkipped ? "n/a" : `${row.indexBuildMs.toFixed(0)} ms`
     ].forEach((text) => {
       const td = document.createElement("td");
       td.textContent = text;
@@ -923,7 +1240,7 @@ function renderBenchmark(data) {
     });
     if (!row.resultsIdentical) {
       tr.style.borderBottom = "2px solid var(--rose)";
-      tr.title = "Strategies disagreed — this row is not a valid measurement";
+      tr.title = "Strategies disagreed, so this row is not a valid measurement";
     }
     body.append(tr);
   }
@@ -1032,11 +1349,27 @@ $("presets").addEventListener("click", (event) => {
   search();
 });
 
-$("regenerate").addEventListener("click", () => generateDataset());
+$("dataset-presets").addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-preset]");
+  if (button) applyPreset(button.dataset.preset);
+});
+
+$("regenerate").addEventListener("click", () => {
+  userChose = true;
+  clearTimeout(autoTimer);
+  markPreset(null);
+  buildDataset(Number($("count").value) || PRESETS.small.count,
+    Number($("length").value) || PRESETS.small.length);
+});
+
 $("upload").addEventListener("click", () => $("file").click());
 $("file").addEventListener("change", (event) => {
-  if (event.target.files[0]) uploadFile(event.target.files[0]);
+  const file = event.target.files[0];
+  event.target.value = "";
+  if (file) uploadFile(file);
 });
+$("load-sample").addEventListener("click", loadSample);
+$("load-small").addEventListener("click", () => applyPreset("small"));
 $("run-benchmark").addEventListener("click", runBenchmark);
 
 document.addEventListener("keydown", (event) => {
@@ -1060,7 +1393,9 @@ document.addEventListener("drop", (event) => {
 });
 
 setMode("INDEX_KMP");
-loadDataset();
+syncControls();
+loadSampleList();
+boot();
 </script>
 </body>
 </html>

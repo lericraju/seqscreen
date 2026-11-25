@@ -231,7 +231,7 @@ class SearchServiceTest {
     void bloomPassesAreConfirmedExactly() {
         SequenceIndex idx = index(DatasetService.synthesize(2_000, 300, 32, 0.0, MOTIF));
         // A motif of exactly k bases is a single k-mer, so a random sequence passes by chance
-        // about once in a hundred — the false positives are visible instead of vanishing.
+        // about once in a hundred, so the false positives are visible instead of vanishing.
         SearchOutcome outcome = service.run(idx, "GATTACAG", SearchMode.BLOOM_KMP, exact());
         assertTrue(outcome.candidates() > 0, "expected some Bloom passes");
         assertTrue(outcome.falsePositives() > 0, "expected visible false positives");

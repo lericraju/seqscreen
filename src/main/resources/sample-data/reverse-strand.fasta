@@ -1,0 +1,6 @@
+>forward_hit motif GATTACAGATTACA at position 6
+TTTTTTGATTACAGATTACACCCCCC
+>reverse_hit only the reverse complement, at position 6
+AAAAAATGTAATCTGTAATCCCCCC
+>no_hit control sequence
+ACACACACACACACACACACACAC
