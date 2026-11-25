@@ -1,6 +1,6 @@
 # Team and contributions
 
-**SeqScreen — CIA 3, Advanced Algorithm, Semester V**
+**SeqScreen: CIA 3, Advanced Algorithm, Semester V**
 
 | Member | ID |
 |---|---|
@@ -26,16 +26,16 @@ below is who owns, presents and answers for each part in the viva.
 
 ## What each member should be able to explain
 
-**Leric Raju** — KMP's prefix table and why the text pointer never moves backwards; the benchmark
+**Leric Raju**: KMP's prefix table and why the text pointer never moves backwards; the benchmark
 methodology (same seed, single thread, index build reported separately, exactness check per row).
 
-**Mohammed Yusuf** — why a Bloom filter has no false negatives; how `m` and `k` are derived from `n`
+**Mohammed Yusuf**: why a Bloom filter has no false negatives; how `m` and `k` are derived from `n`
 and `p`; why a pass is only "possibly present" and must be confirmed; why the measured rate is near
 zero for long motifs and high for a motif of exactly `k` bases.
 
-**Tabish Matwankar** — why the index unions postings instead of intersecting them, and why it
-probes the rarest k-mers; why Myers' shift must not be seeded; why hitting index caps falls back to
-Bloom rather than failing.
+**Tabish Matwankar**: why the index probes the rarest k-mers and unions their postings (looser than
+intersecting them, and compulsory across strands); why Myers' shift must not be seeded; why hitting
+index caps falls back to Bloom rather than failing.
 
 Every member should also be able to state the project's one-sentence purpose, the
 confirmed ≤ passes ≤ total invariant, and the main limitations.

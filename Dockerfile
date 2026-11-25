@@ -1,4 +1,4 @@
-# SeqScreen — container image for hosts that run a JVM (Render, Railway, Fly.io, Koyeb, a VPS).
+# SeqScreen container image for hosts that run a JVM (Render, Railway, Fly.io, Koyeb, a VPS).
 # Vercel cannot run this: it has no Java runtime.
 
 # ---------- build ----------

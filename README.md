@@ -98,7 +98,7 @@ curl -X POST localhost:8080/api/benchmark -H "Content-Type: application/json" \
 
 `mode` is `INDEX_KMP` (default), `BLOOM_KMP`, `KMP` or `NAIVE`. A search response carries
 `matches` (sequence id, position, strand, edits, context) and `stats`: sequences screened out,
-candidates, `bloomPasses` (passes of the Bloom filter — *possibly present*, not confirmed),
+candidates, `bloomPasses` (passes of the Bloom filter, meaning *possibly present*, not confirmed),
 confirmed sequences, false positives, the measured false-positive rate, the screening note, the
 workers used and the elapsed time. The invariant to remember is `confirmed ≤ passes ≤ total`.
 Errors return `{"error": "..."}` with HTTP 400 (bad input), 409 (no dataset), 413 (too large),
@@ -133,21 +133,20 @@ service/     DatasetService, SearchService, SearchMode, SearchOptions, SearchOut
 controller/  DatasetController, SearchController, BenchmarkController, GlobalExceptionHandler
 dto/         request/response records
 validation/  FastaParser, MotifValidator, ApiException
-static/      index.html — the whole frontend
+static/      index.html, the whole frontend
 ```
 
 ## Documents
 
-- [docs/PROPOSAL.md](docs/PROPOSAL.md) — project proposal (Deliverable A).
-- [docs/REPORT.md](docs/REPORT.md) — technical report with measured results (Deliverable C).
-- [docs/DEMO.md](docs/DEMO.md) — the eight-minute demonstration script (Deliverable D).
-- [docs/STUDY_GUIDE.md](docs/STUDY_GUIDE.md) — concepts, code map and viva questions.
-- [CONTRIBUTIONS.md](CONTRIBUTIONS.md) — module ownership (Deliverable B).
+- [CONTRIBUTIONS.md](CONTRIBUTIONS.md): module ownership (Deliverable B).
+
+The proposal, technical report, demo script and study guide are submitted separately, not kept in
+this repository.
 
 ## Sample data
 
-- [sample-data/sample.fasta](sample-data/sample.fasta) — 30 synthetic sequences for upload testing.
-- [sample-data/reverse-strand.fasta](sample-data/reverse-strand.fasta) — the motif on the forward
+- [sample-data/sample.fasta](sample-data/sample.fasta): 30 synthetic sequences for upload testing.
+- [sample-data/reverse-strand.fasta](sample-data/reverse-strand.fasta): the motif on the forward
   strand, the same motif present only as its reverse complement, and a control. Search
   `GATTACAGATTACA` to see one hit flagged `forward` and one flagged `reverse`.
-- [sample-data/invalid.fasta](sample-data/invalid.fasta) — contains `X`, so it must be rejected.
+- [sample-data/invalid.fasta](sample-data/invalid.fasta): contains `X`, so it must be rejected.
