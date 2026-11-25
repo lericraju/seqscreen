@@ -1,5 +1,7 @@
 # SeqScreen
 
+DISCLAIMER: Project Done as a group on Leric Raju's Laptop
+
 Motif screening for DNA sequence collections. Java 17 + Spring Boot backend, one plain-JS page
 served by the same process.
 
